@@ -2,189 +2,303 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Live EVP Visualizer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M.A.P.S. EVP Analyzer - Professional Edition</title>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-            margin: 0; padding: 20px;
-            background:
-                radial-gradient(circle at top left, rgba(255,255,255,0.06) 0, transparent 55%),
-                radial-gradient(circle at bottom right, rgba(0,255,255,0.05) 0, transparent 60%),
-                linear-gradient(135deg, #070707 0%, #151515 40%, #101820 100%);
-            color: #eee;
+        :root { --bg: #0d0d0d; --panel: #1a1a1a; --accent: #00ffcc; --text: #e0e0e0; }
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); color: var(--text);
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
         }
-        h1 { margin-top: 0; text-align:center; }
-        #controls { display:flex; gap:10px; justify-content:center; margin-bottom:20px; flex-wrap:wrap; }
+        h1 { margin-bottom: 5px; color: var(--accent); text-shadow: 0 0 10px rgba(0,255,204,0.3); }
+        .container { width: 100%; max-width: 1200px; }
+        
+        /* Upload Area */
+        .upload-zone {
+            background: var(--panel); border: 2px dashed #444; border-radius: 10px;
+            padding: 30px; text-align: center; cursor: pointer; transition: 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-zone:hover { border-color: var(--accent); background: #222; }
+        
+        /* Controls */
+        .controls { 
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; 
+            padding: 15px; background: var(--panel); border-radius: 10px;
+        }
         button {
-            background: linear-gradient(145deg, #333, #444);
-            color:#fff; border:none; padding:10px 18px; border-radius:8px;
-            cursor:pointer; font-size:14px; font-weight:500;
+            background: #333; color: white; border: 1px solid #555; padding: 10px 20px;
+            border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;
         }
-        button:hover { background: linear-gradient(145deg, #555, #666); }
-        canvas {
-            width:100%; max-width:900px; height:160px;
-            border:1px solid #444; border-radius:8px; background:#000;
-            display:block; margin:10px auto;
+        button:hover:not(:disabled) { background: var(--accent); color: black; border-color: var(--accent); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.active { background: var(--accent); color: black; box-shadow: 0 0 15px var(--accent); }
+
+        /* Visualization Container */
+        .viz-container {
+            position: relative;
+            width: 100%;
+            height: 400px; /* Large display */
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
-        #status { text-align:center; margin-bottom:10px; font-size:14px; }
+        
+        /* Layers: Spectrogram at back, Waveform on top */
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #spectrogramCanvas { z-index: 1; }
+        #waveformCanvas { z-index: 2; pointer-events: none; } /* Overlay */
+
+        .status-bar { margin-top: 10px; font-family: monospace; color: #888; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <h1>Live Waveform & Spectral Analyzer</h1>
-    <div id="status">Select input to begin.</div>
-    <div id="controls">
-        <button id="micBtn">🎙️ Use Microphone</button>
-        <input type="file" id="fileInput" accept="audio/*" style="display:none;">
-        <button id="fileBtn">📁 Use Audio File</button>
+
+<div class="container">
+    <div style="text-align:center;">
+        <h1>🔮 M.A.P.S. EVP Audio Analyzer</h1>
+        <p style="color:#888;">Real-time Spectrogram & Frequency Analysis</p>
     </div>
 
-    nvas idd="waveCanvas"></canvas>
-    nvas idd="specCanvas"></canvas>
+    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <h3>📁 Click to Upload Audio File</h3>
+        <p style="font-size: 0.9em; color: #aaa;">Supports MP3, WAV, M4A</p>
+        <input type="file" id="fileInput" accept="audio/*" style="display:none">
+    </div>
 
-    <script>
-        let audioContext, analyser, sourceNode, fileBuffer;
-        let running = false;
+    <div class="controls">
+        <button id="playBtn" disabled>▶ Play / Analyze</button>
+        <button id="stopBtn" disabled>⏹ Stop</button>
+        <div style="border-left: 1px solid #444; margin: 0 10px;"></div>
+        <label style="display:flex; align-items:center; gap:10px;">
+            <span>Sensitivity:</span>
+            <input type="range" id="gainSlider" min="0" max="300" value="100">
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; margin-left:15px;">
+            <span>Speed:</span>
+            <input type="range" id="speedSlider" min="1" max="10" value="2">
+        </label>
+    </div>
 
-        const statusEl = document.getElementById('status');
-        const waveCanvas = document.getElementById('waveCanvas');
-        const specCanvas = document.getElementById('specCanvas');
+    <div class="viz-container">
+        <canvas id="spectrogramCanvas"></canvas>
+        <canvas id="waveformCanvas"></canvas>
+    </div>
+    
+    <div class="status-bar" id="status">Waiting for file...</div>
+</div>
 
-        function setStatus(msg) { statusEl.textContent = msg; }
+<script>
+    // --- Global Variables ---
+    let audioCtx, analyser, sourceNode;
+    let audioBuffer = null;
+    let isPlaying = false;
+    let animationId;
+    
+    // Config
+    const FFT_SIZE = 2048; 
+    let scrollSpeed = 2; // Pixels to scroll per frame
+    
+    // DOM Elements
+    const fileInput = document.getElementById('fileInput');
+    const playBtn = document.getElementById('playBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusEl = document.getElementById('status');
+    const gainSlider = document.getElementById('gainSlider');
+    const speedSlider = document.getElementById('speedSlider');
+    
+    // Canvas Setup
+    const spectroCanvas = document.getElementById('spectrogramCanvas');
+    const waveCanvas = document.getElementById('waveformCanvas');
+    const ctxSpectro = spectroCanvas.getContext('2d', { willReadFrequently: true });
+    const ctxWave = waveCanvas.getContext('2d');
 
-        async function initContext() {
-            if (!audioContext || audioContext.state === 'closed') {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // --- 1. Initialization & Sizing ---
+    function resizeCanvases() {
+        // Get the actual display size from CSS
+        const width = spectroCanvas.clientWidth;
+        const height = spectroCanvas.clientHeight;
+
+        // Set the internal resolution to match display size
+        if (spectroCanvas.width !== width || spectroCanvas.height !== height) {
+            spectroCanvas.width = width;
+            spectroCanvas.height = height;
+            waveCanvas.width = width;
+            waveCanvas.height = height;
+            
+            // Fill black initially
+            ctxSpectro.fillStyle = 'black';
+            ctxSpectro.fillRect(0, 0, width, height);
+        }
+    }
+    // Call resize on load and window resize
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases(); 
+
+    // --- 2. File Handling ---
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        statusEl.textContent = `Loading ${file.name}...`;
+        
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const audioData = ev.target.result;
+            // Decode audio
+            const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+            tempCtx.decodeAudioData(audioData, (buffer) => {
+                audioBuffer = buffer;
+                statusEl.textContent = `✅ Loaded: ${file.name} (${(buffer.duration).toFixed(1)}s)`;
+                playBtn.disabled = false;
+                stopBtn.disabled = true;
+            }, (e) => statusEl.textContent = "Error decoding file.");
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // --- 3. Audio Engine ---
+    function startAudio() {
+        if (!audioBuffer) return;
+        
+        // Init Audio Context (if not already)
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Setup Nodes
+        sourceNode = audioCtx.createBufferSource();
+        sourceNode.buffer = audioBuffer;
+        
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = FFT_SIZE;
+        analyser.smoothingTimeConstant = 0.0; // 0 for instant reaction
+        
+        // Connect: Source -> Analyser -> Speakers
+        sourceNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        
+        sourceNode.onended = stopAudio;
+        sourceNode.start(0);
+        
+        isPlaying = true;
+        playBtn.disabled = true;
+        stopBtn.disabled = false;
+        playBtn.classList.add('active');
+        
+        resizeCanvases(); // Ensure size is correct before drawing
+        drawLoop();
+    }
+
+    function stopAudio() {
+        if (sourceNode) {
+            try { sourceNode.stop(); } catch(e){}
+            sourceNode.disconnect();
+        }
+        isPlaying = false;
+        playBtn.disabled = false;
+        stopBtn.disabled = true;
+        playBtn.classList.remove('active');
+        cancelAnimationFrame(animationId);
+    }
+
+    // --- 4. The Visualization Loop (The Magic) ---
+    function drawLoop() {
+        if (!isPlaying) return;
+        animationId = requestAnimationFrame(drawLoop);
+
+        // Data Arrays
+        const bufferLength = analyser.frequencyBinCount;
+        const freqData = new Uint8Array(bufferLength);
+        const waveData = new Uint8Array(bufferLength);
+        
+        analyser.getByteFrequencyData(freqData);
+        analyser.getByteTimeDomainData(waveData);
+
+        const width = spectroCanvas.width;
+        const height = spectroCanvas.height;
+
+        // --- A. Draw Spectrogram (Waterfall) ---
+        
+        // 1. Shift the existing image to the LEFT
+        // We draw the current canvas back onto itself, but shifted x-speed
+        ctxSpectro.drawImage(spectroCanvas, -scrollSpeed, 0);
+
+        // 2. Draw the new data column on the RIGHT edge
+        const barHeight = height / bufferLength; // Height of one frequency bin pixel
+        
+        // Optimization: Create a minimal ImageData for the new slice
+        // (For simplicity in this script, we will draw rectangles, 
+        // effectively 1px wide vertical strips)
+        
+        const gain = gainSlider.value / 100; // Brightness multiplier
+
+        for (let i = 0; i < bufferLength; i++) {
+            // We only care about the bottom half of frequencies usually for voice
+            // but let's map the whole spectrum linearly to height
+            
+            // Value is 0-255. 
+            let value = freqData[i] * gain; 
+            if(value > 255) value = 255;
+
+            // COLOR MAPPING (Thermal Style)
+            // Low = Black/Blue, Mid = Green, High = Red/Yellow
+            let r=0, g=0, b=0;
+            
+            if (value < 50) {
+                // Black to Dark Blue
+                r = 0; g = 0; b = value * 2; 
+            } else if (value < 128) {
+                // Blue to Cyan/Green
+                r = 0; g = (value - 50) * 3; b = 255;
+            } else if (value < 200) {
+                // Green to Yellow
+                r = (value - 128) * 3; g = 255; b = 255 - r;
+            } else {
+                // Yellow to White
+                r = 255; g = 255; b = (value - 200) * 5;
             }
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume();
-            }
-            if (!analyser) {
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
-                analyser.smoothingTimeConstant = 0.8;
-            }
+
+            ctxSpectro.fillStyle = `rgb(${r},${g},${b})`;
+            
+            // Draw from bottom up (low freq at bottom)
+            // We draw a block 'scrollSpeed' wide so there are no gaps
+            const y = height - (i * (height / bufferLength)); 
+            const h = -(height / bufferLength) - 1; // Slight overlap to prevent gaps
+            
+            ctxSpectro.fillRect(width - scrollSpeed, y, scrollSpeed, h);
         }
 
-        async function useMic() {
-            try {
-                await initContext();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-                const micSource = audioContext.createMediaStreamSource(stream);
-                micSource.connect(analyser);
-                startDrawing();
-                setStatus('🎙️ Live from microphone.');
-            } catch (err) {
-                console.error(err);
-                setStatus('❌ Microphone access denied or unavailable.');
-            }
+        // --- B. Draw Waveform (Overlay) ---
+        ctxWave.clearRect(0, 0, width, height);
+        ctxWave.lineWidth = 2;
+        ctxWave.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white
+        ctxWave.beginPath();
+
+        const sliceWidth = width * 1.0 / bufferLength;
+        let x = 0;
+
+        for(let i = 0; i < bufferLength; i++) {
+            const v = waveData[i] / 128.0; // 0..2 float centered at 1
+            const y = v * height / 2; // centered vertically
+
+            if(i === 0) ctxWave.moveTo(x, y);
+            else ctxWave.lineTo(x, y);
+
+            x += sliceWidth;
         }
+        ctxWave.stroke();
+    }
 
-        function useFile(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    await initContext();
-                    fileBuffer = await audioContext.decodeAudioData(e.target.result);
-                    if (sourceNode) sourceNode.disconnect();
-                    sourceNode = audioContext.createBufferSource();
-                    sourceNode.buffer = fileBuffer;
-                    sourceNode.loop = true;
-                    sourceNode.connect(analyser);
-                    analyser.connect(audioContext.destination);
-                    sourceNode.start(0);
-                    startDrawing();
-                    setStatus('📁 Playing file in loop for live analysis.');
-                } catch (err) {
-                    console.error(err);
-                    setStatus('❌ Could not decode audio file.');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
+    // Controls Events
+    playBtn.onclick = startAudio;
+    stopBtn.onclick = stopAudio;
+    
+    speedSlider.oninput = (e) => { scrollSpeed = parseInt(e.target.value); };
 
-        function startDrawing() {
-            running = true;
-            drawWaveform();
-            drawSpectrum();
-        }
+</script>
 
-        function resizeCanvas(canvas) {
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * window.devicePixelRatio;
-            canvas.height = rect.height * window.devicePixelRatio;
-            const ctx = canvas.getContext('2d');
-            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-            return { ctx, width: rect.width, height: rect.height };
-        }
-
-        function drawWaveform() {
-            if (!running || !analyser) return;
-            requestAnimationFrame(drawWaveform);
-
-            const { ctx, width, height } = resizeCanvas(waveCanvas);
-            const dataArray = new Uint8Array(analyser.fftSize);
-            analyser.getByteTimeDomainData(dataArray); // time-domain waveform[web:179][web:182]
-
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#0ff';
-
-            ctx.beginPath();
-            const sliceWidth = width / dataArray.length;
-            let x = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                const v = dataArray[i] / 128.0 - 1.0;
-                const y = height / 2 + v * height / 2 * 0.9;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-                x += sliceWidth;
-            }
-            ctx.stroke();
-        }
-
-        function drawSpectrum() {
-            if (!running || !analyser) return;
-            requestAnimationFrame(drawSpectrum);
-
-            const { ctx, width, height } = resizeCanvas(specCanvas);
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(dataArray); // magnitude spectrum[web:179][web:181]
-
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-
-            const nyquist = audioContext.sampleRate / 2;
-            const barWidth = width / dataArray.length * 2.2;
-            let x = 0;
-
-            for (let i = 0; i < dataArray.length; i++) {
-                const magnitude = dataArray[i] / 255;
-                const barHeight = magnitude * height;
-                const freq = i / dataArray.length * nyquist;
-                const inVoice = freq >= 300 && freq <= 3000;
-
-                let color;
-                if (inVoice) {
-                    color = `hsl(120, 100%, ${magnitude * 60 + 20}%)`; // voice band green
-                } else {
-                    color = `hsl(200, 60%, ${magnitude * 40 + 10}%)`; // rest blue
-                }
-
-                ctx.fillStyle = color;
-                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-                x += barWidth + 1;
-            }
-        }
-
-        document.getElementById('micBtn').onclick = useMic;
-        document.getElementById('fileBtn').onclick = () => document.getElementById('fileInput').click();
-        document.getElementById('fileInput').onchange = (e) => useFile(e.target.files[0]);
-
-        window.onresize = () => { if (running) { drawWaveform(); drawSpectrum(); } };
-    </script>
 </body>
 </html>
