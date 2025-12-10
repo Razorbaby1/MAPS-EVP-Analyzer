@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live EVP Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+            margin: 0; padding: 20px;
+            background:
+                radial-gradient(circle at top left, rgba(255,255,255,0.06) 0, transparent 55%),
+                radial-gradient(circle at bottom right, rgba(0,255,255,0.05) 0, transparent 60%),
+                linear-gradient(135deg, #070707 0%, #151515 40%, #101820 100%);
+            color: #eee;
+        }
+        h1 { margin-top: 0; text-align:center; }
+        #controls { display:flex; gap:10px; justify-content:center; margin-bottom:20px; flex-wrap:wrap; }
+        button {
+            background: linear-gradient(145deg, #333, #444);
+            color:#fff; border:none; padding:10px 18px; border-radius:8px;
+            cursor:pointer; font-size:14px; font-weight:500;
+        }
+        button:hover { background: linear-gradient(145deg, #555, #666); }
+        canvas {
+            width:100%; max-width:900px; height:160px;
+            border:1px solid #444; border-radius:8px; background:#000;
+            display:block; margin:10px auto;
+        }
+        #status { text-align:center; margin-bottom:10px; font-size:14px; }
+    </style>
+</head>
+<body>
+    <h1>Live Waveform & Spectral Analyzer</h1>
+    <div id="status">Select input to begin.</div>
+    <div id="controls">
+        <button id="micBtn">🎙️ Use Microphone</button>
+        <input type="file" id="fileInput" accept="audio/*" style="display:none;">
+        <button id="fileBtn">📁 Use Audio File</button>
+    </div>
+
+    nvas idd="waveCanvas"></canvas>
+    nvas idd="specCanvas"></canvas>
+
+    <script>
+        let audioContext, analyser, sourceNode, fileBuffer;
+        let running = false;
+
+        const statusEl = document.getElementById('status');
+        const waveCanvas = document.getElementById('waveCanvas');
+        const specCanvas = document.getElementById('specCanvas');
+
+        function setStatus(msg) { statusEl.textContent = msg; }
+
+        async function initContext() {
+            if (!audioContext || audioContext.state === 'closed') {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+            if (!analyser) {
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = 0.8;
+            }
+        }
+
+        async function useMic() {
+            try {
+                await initContext();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+                const micSource = audioContext.createMediaStreamSource(stream);
+                micSource.connect(analyser);
+                startDrawing();
+                setStatus('🎙️ Live from microphone.');
+            } catch (err) {
+                console.error(err);
+                setStatus('❌ Microphone access denied or unavailable.');
+            }
+        }
+
+        function useFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    await initContext();
+                    fileBuffer = await audioContext.decodeAudioData(e.target.result);
+                    if (sourceNode) sourceNode.disconnect();
+                    sourceNode = audioContext.createBufferSource();
+                    sourceNode.buffer = fileBuffer;
+                    sourceNode.loop = true;
+                    sourceNode.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    sourceNode.start(0);
+                    startDrawing();
+                    setStatus('📁 Playing file in loop for live analysis.');
+                } catch (err) {
+                    console.error(err);
+                    setStatus('❌ Could not decode audio file.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function startDrawing() {
+            running = true;
+            drawWaveform();
+            drawSpectrum();
+        }
+
+        function resizeCanvas(canvas) {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+            return { ctx, width: rect.width, height: rect.height };
+        }
+
+        function drawWaveform() {
+            if (!running || !analyser) return;
+            requestAnimationFrame(drawWaveform);
+
+            const { ctx, width, height } = resizeCanvas(waveCanvas);
+            const dataArray = new Uint8Array(analyser.fftSize);
+            analyser.getByteTimeDomainData(dataArray); // time-domain waveform[web:179][web:182]
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#0ff';
+
+            ctx.beginPath();
+            const sliceWidth = width / dataArray.length;
+            let x = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const v = dataArray[i] / 128.0 - 1.0;
+                const y = height / 2 + v * height / 2 * 0.9;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            ctx.stroke();
+        }
+
+        function drawSpectrum() {
+            if (!running || !analyser) return;
+            requestAnimationFrame(drawSpectrum);
+
+            const { ctx, width, height } = resizeCanvas(specCanvas);
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray); // magnitude spectrum[web:179][web:181]
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+            const nyquist = audioContext.sampleRate / 2;
+            const barWidth = width / dataArray.length * 2.2;
+            let x = 0;
+
+            for (let i = 0; i < dataArray.length; i++) {
+                const magnitude = dataArray[i] / 255;
+                const barHeight = magnitude * height;
+                const freq = i / dataArray.length * nyquist;
+                const inVoice = freq >= 300 && freq <= 3000;
+
+                let color;
+                if (inVoice) {
+                    color = `hsl(120, 100%, ${magnitude * 60 + 20}%)`; // voice band green
+                } else {
+                    color = `hsl(200, 60%, ${magnitude * 40 + 10}%)`; // rest blue
+                }
+
+                ctx.fillStyle = color;
+                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+
+        document.getElementById('micBtn').onclick = useMic;
+        document.getElementById('fileBtn').onclick = () => document.getElementById('fileInput').click();
+        document.getElementById('fileInput').onchange = (e) => useFile(e.target.files[0]);
+
+        window.onresize = () => { if (running) { drawWaveform(); drawSpectrum(); } };
+    </script>
+</body>
+</html>
