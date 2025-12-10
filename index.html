@@ -32,30 +32,7 @@
         button:hover:not(:disabled) { background: linear-gradient(145deg, #555, #666); transform: translateY(-1px); }
         button.active, button:disabled { background: linear-gradient(145deg, #0ff, #00ddff); }
         button.success { background: linear-gradient(145deg, #0a0, #0d0); }
-        
-        /* NEW STYLES FOR VISUALIZATION CONTAINER */
-        .visualizers {
-            margin-top: 30px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            text-align: center;
-        }
-        .visualizers h2 {
-            color: #00FFFF;
-            margin-bottom: 15px;
-        }
-        #staticWaveform, #spectrogram { 
-            width: 100%; 
-            height: 200px; 
-            border: 2px solid #444; 
-            border-radius: 8px; 
-            margin-bottom: 20px; 
-            background: #000; 
-            display: block; 
-        }
-        /* END NEW STYLES */
-
+        #waveform, #spectrogram { width: 100%; height: 220px; border: 2px solid #444; border-radius: 8px; margin-bottom: 20px; background: #000; display: block; }
         .preset-btn { background: linear-gradient(145deg, #444, #555); font-size: 13px; padding: 10px 16px; min-width: 100px; }
         .preset-btn.active { background: linear-gradient(145deg, #0a0, #0d0); }
         input[type=range] { width: 140px; height: 6px; }
@@ -66,9 +43,15 @@
 </head>
 <body>
     <div class="header">
-        <h1>🔮 M.A.P.S. EVP Audio Analyzer</h1>
-        <p style="color: #aaa; font-size: 18px;">Noise reduction • Voice isolation • Spectral analysis</p>
-    </div>
+    <h1>🔮 M.A.P.S. EVP Audio Analyzer</h1>
+    <p style="color: #aaa; font-size: 18px;">Noise reduction • Voice isolation • Spectral analysis</p>
+    <p style="margin-top:10px;">
+        <a href="live-visualizer.html" style="color:#0ff; text-decoration:none; font-weight:500;">
+            ▶️ Open Live Waveform & Spectrum
+        </a>
+    </p>
+</div>
+
 
     <div class="upload-zone" id="uploadZone">
         <div class="file-input-overlay">
@@ -105,17 +88,19 @@
             <input type="checkbox" id="voiceFocusToggle"> Highlight voice band (300–3000 Hz)
         </label>
     </div>
-</div>  <div class="visualizers">
-        <h2>Audio Visualizations</h2>
-        <canvas id="staticWaveform" class="hidden"></canvas> 
-        <canvas id="spectrogram" class="hidden"></canvas>
-    </div>
-    <div id="processed" class="hidden">
+</div>  <!-- end of #controls -->
+
+
+
+<div id="processed" class="hidden">
     <h3>✨ Processed EVP Audio</h3>
     <audio id="processedAudio" controls style="width:100%; margin-bottom: 10px; border-radius: 8px;"></audio>
     <button id="downloadBtn" class="hidden">⬇️ Download Processed WAV</button>
     <p><em>🎧 Headphones recommended.</em></p>
 </div>
+
+
+
 
 
     <script>
@@ -125,15 +110,14 @@
         let isPlaying = false, isInitialized = false;
         let animationId = null;
         let currentFileData = null;
-        let ctxSpectro = null; // New global variable for Spectrogram context
 
         const els = {
             get uploadZone() { return document.getElementById('uploadZone'); },
             get status() { return document.getElementById('status'); },
             get fileInfo() { return document.getElementById('fileInfo'); },
             get controls() { return document.getElementById('controls'); },
-            get staticWaveform() { return document.getElementById('staticWaveform'); }, // UPDATED
-            get spectrogram() { return document.getElementById('spectrogram'); },       // UPDATED
+            get waveform() { return document.getElementById('waveform'); },
+            get spectrogram() { return document.getElementById('spectrogram'); },
             get initBtn() { return document.getElementById('initBtn'); },
             get playBtn() { return document.getElementById('playBtn'); },
             get processBtn() { return document.getElementById('processBtn'); },
@@ -199,7 +183,7 @@
         document.addEventListener('dragover', preventDefaults, false);
         document.addEventListener('drop', preventDefaults, false);
 
-        // Safe init (UPDATED to show staticWaveform)
+        // FIXED: Safe init (unchanged)
         if (els.initBtn) {
             els.initBtn.onclick = async () => {
                 if (isInitialized || !currentFileData) return;
@@ -212,17 +196,13 @@
                     audioBuffer = await audioContext.decodeAudioData(currentFileData);
                     setStatus(`✅ Success: ${audioBuffer.duration.toFixed(1)}s audio`);
                     setupAudioGraph();
-                    
-                    // CRITICAL: Ensure staticWaveform is shown before drawing dimensions are calculated
-                    toggleHidden('staticWaveform', true); // Show the static overview canvas
-                    toggleHidden('spectrogram', false);  // Hide the live analysis canvas
-                    
                     safeDrawWaveform();
                     els.initBtn.disabled = true;
                     els.initBtn.textContent = '✅ Loaded!';
                     els.initBtn.classList.add('success');
                     isInitialized = true;
-                    
+                    toggleHidden('waveform', true);
+                    toggleHidden('spectrogram', true);
                     enableControls();
                 } catch (err) {
                     setStatus(`❌ Decode failed: ${err.message || err.name}`, true);
@@ -251,38 +231,29 @@
             gainNode.connect(audioContext.destination);
         }
 
-        // safeDrawWaveform (UPDATED with safer dimensioning)
         function safeDrawWaveform() {
-            if (!audioBuffer || !els.staticWaveform) return;
-            const canvas = els.staticWaveform;
+            if (!audioBuffer || !els.waveform) return;
+            const canvas = els.waveform;
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
-            
-            // Safer dimension calculation: Use clientWidth for dynamic width, fixed height from CSS
-            const dpr = window.devicePixelRatio;
-            const drawWidth = canvas.clientWidth;
-            const drawHeight = 200; // Based on CSS height: 200px
-            
-            // Set the canvas coordinate space
-            canvas.width = drawWidth * dpr;
-            canvas.height = drawHeight * dpr;
-            ctx.scale(dpr, dpr);
-            
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
             const data = new Float32Array(audioBuffer.length);
             audioBuffer.copyFromChannel(data, 0);
-            
             ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, drawWidth, drawHeight); // Use drawWidth/Height for coordinate space
+            ctx.fillRect(0, 0, rect.width, rect.height);
             ctx.strokeStyle = '#0ff';
             ctx.lineWidth = 2;
             ctx.beginPath();
             const sliceCount = 1500;
-            const sliceWidth = drawWidth / sliceCount; // Use drawWidth
+            const sliceWidth = rect.width / sliceCount;
             let x = 0;
             for (let i = 0; i < sliceCount; i++) {
                 const idx = Math.floor(i * audioBuffer.length / sliceCount);
                 const v = Math.abs(data[idx]);
-                const y = (1 - v) * drawHeight / 2; // Use drawHeight
+                const y = (1 - v) * rect.height / 2;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
                 x += sliceWidth;
@@ -297,7 +268,7 @@
             document.querySelectorAll('.preset-btn').forEach(btn => btn.disabled = false);
         }
 
-        // Play button (UPDATED to toggle visualization canvases)
+        // FIXED: Play button with proper source recreation
         if (els.playBtn) {
             els.playBtn.onclick = () => {
                 if (!isInitialized || !audioContext) return;
@@ -313,10 +284,6 @@
                     filterNode.connect(gainNode);
                     gainNode.connect(audioContext.destination);
                     source.start(0);
-                    
-                    toggleHidden('staticWaveform', false); // Hide static view
-                    toggleHidden('spectrogram', true);   // Show live view
-                    
                     drawLiveSpectrogram();
                     els.playBtn.textContent = '⏸️ Stop';
                     els.playBtn.classList.add('active');
@@ -324,10 +291,6 @@
                 } else {
                     source.stop();
                     if (animationId) cancelAnimationFrame(animationId);
-                    
-                    toggleHidden('staticWaveform', true); // Show static view
-                    toggleHidden('spectrogram', false);  // Hide live view
-                    
                     els.playBtn.textContent = '▶️ Play';
                     els.playBtn.classList.remove('active');
                     isPlaying = false;
@@ -335,154 +298,124 @@
             };
         }
 
-        // NEW/UPDATED: Scrolling Spectrogram function (with safer dimensioning)
         function drawLiveSpectrogram() {
-            if (!els.spectrogram || !analyser) return;
+    if (!els.spectrogram || !analyser) return;
+    const canvas = els.spectrogram;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-            const canvas = els.spectrogram;
-            
-            if (!ctxSpectro) {
-                ctxSpectro = canvas.getContext('2d');
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const voiceFocusToggle = document.getElementById('voiceFocusToggle');
+
+    function render() {
+        if (!isPlaying) return;
+        animationId = requestAnimationFrame(render);
+
+        analyser.getByteFrequencyData(dataArray); // frequency bins 0..Nyquist[web:179][web:176]
+
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(0, 0, rect.width, rect.height);
+
+        const nyquist = audioContext.sampleRate / 2;
+        const barWidth = rect.width / dataArray.length * 3;
+        let x = 0;
+
+        for (let i = 0; i < dataArray.length; i++) {
+            const barHeight = dataArray[i] / 255 * rect.height;
+            const freq = i / dataArray.length * nyquist;
+            const inVoiceBand = freq >= 300 && freq <= 3000;
+
+            let color;
+            if (voiceFocusToggle && voiceFocusToggle.checked) {
+                if (inVoiceBand) {
+                    color = `hsl(120, 100%, ${barHeight / rect.height * 60 + 15}%)`; // greenish
+                } else {
+                    color = `hsl(200, 40%, ${barHeight / rect.height * 20 + 5}%)`;   // dim blue
+                }
+            } else {
+                color = `hsl(${i / analyser.frequencyBinCount * 300}, 100%, ${barHeight / rect.height * 60 + 10}%)`;
             }
 
-            // Calculate dimensions ONCE when the function is called
-            const dpr = window.devicePixelRatio;
-            const drawWidth = canvas.clientWidth;
-            const drawHeight = 200; // Fixed height from CSS
-            
-            // Set the canvas coordinate space
-            canvas.width = drawWidth * dpr;
-            canvas.height = drawHeight * dpr;
-            ctxSpectro.scale(dpr, dpr);
-
-            const bufferLength = analyser.frequencyBinCount;
-            const freqDataArray = new Uint8Array(bufferLength);
-            const voiceFocusToggle = document.getElementById('voiceFocusToggle');
-            const nyquist = audioContext.sampleRate / 2;
-
-            function render() {
-                if (!isPlaying || !analyser) {
-                    animationId = null;
-                    return;
-                }
-                animationId = requestAnimationFrame(render);
-
-                analyser.getByteFrequencyData(freqDataArray);
-
-                // 1. Shift existing image one pixel to the left (scrolling effect)
-                const imageData = ctxSpectro.getImageData(1 * dpr, 0, (drawWidth - 1) * dpr, drawHeight * dpr);
-                ctxSpectro.putImageData(imageData, 0, 0);
-
-                // 2. Draw the new column of frequency data on the far right
-                for (let i = 0; i < bufferLength; i++) {
-                    const value = freqDataArray[i];
-                    const percent = value / 255;
-                    const freq = i / bufferLength * nyquist;
-                    const inVoiceBand = freq >= 300 && freq <= 3000;
-
-                    let hue, saturation, lightness;
-
-                    if (voiceFocusToggle && voiceFocusToggle.checked) {
-                        if (inVoiceBand) {
-                            // Highlighted voice band: bright green/yellow
-                            hue = 80; saturation = 100; lightness = percent * 50 + 10;
-                        } else {
-                            // Background frequencies: dim blue
-                            hue = 240; saturation = 40; lightness = percent * 20 + 5;
-                        }
-                    } else {
-                        // Classic spectrogram colors (map intensity to Hue)
-                        hue = Math.floor(255 - (percent * 255 * 0.7)); 
-                        saturation = 100;
-                        lightness = percent * 60 + 10;
-                    }
-
-                    ctxSpectro.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                    
-                    const sliceHeight = drawHeight / bufferLength;
-                    
-                    // Draw at the far right edge of the canvas (drawWidth - 1)
-                    ctxSpectro.fillRect(drawWidth - 1, drawHeight - (i * sliceHeight), 1, sliceHeight + 1);
-                }
-            }
-            // Start the loop
-            render();
+            ctx.fillStyle = color;
+            ctx.fillRect(x, rect.height - barHeight, barWidth, barHeight);
+            x += barWidth + 1;
         }
-        // END NEW/UPDATED Spectrogram function
+    }
+    render();
+}
 
 
-        // Preset buttons (UPDATED to stop visualization loop)
+        // FIXED: Safe preset buttons - STOP audio first, then reconnect
         document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                // stop audio first
-                if (isPlaying) {
-                    source?.stop();
-                    // STOP LIVE VISUALIZATIONS
-                    if (animationId) cancelAnimationFrame(animationId);
-                    
-                    toggleHidden('staticWaveform', true); // Show static view
-                    toggleHidden('spectrogram', false);  // Hide live view
+    btn.onclick = (e) => {
+        // stop audio first
+        if (isPlaying) {
+            source?.stop();
+            if (animationId) cancelAnimationFrame(animationId);
+            isPlaying = false;
+            els.playBtn.textContent = '▶️ Play';
+            els.playBtn.classList.remove('active');
+        }
 
-                    isPlaying = false;
-                    els.playBtn.textContent = '▶️ Play';
-                    els.playBtn.classList.remove('active');
-                }
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
 
-                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-
-                if (filterNode) {
-                    const preset = e.target.dataset.preset;
-                    switch (preset) {
-                        case 'voice':
-                            filterNode.type = 'peaking';
-                            filterNode.frequency.value = 1500;
-                            filterNode.Q.value = 1;
-                            filterNode.gain.value = 12;
-                            setStatus('🎤 Voice Boost (1–3 kHz peaking)');
-                            break;
-                        case 'clean':
-                            filterNode.type = 'lowpass';
-                            filterNode.frequency.value = 5000;
-                            filterNode.Q.value = 0.7;
-                            filterNode.gain.value = 0;
-                            setStatus('🧹 Clean EVP (cut >5 kHz hiss)');
-                            break;
-                        case 'rumble':
-                            filterNode.type = 'highpass';
-                            filterNode.frequency.value = 100;
-                            filterNode.Q.value = 0.7;
-                            filterNode.gain.value = 0;
-                            setStatus('🔈 Remove Rumble (<100 Hz)');
-                            break;
-                        case 'whisper':
-                            filterNode.type = 'highpass';
-                            filterNode.frequency.value = 600;
-                            filterNode.Q.value = 0.7;
-                            filterNode.gain.value = 0;
-                            setStatus('👻 Whisper Boost (600 Hz+ focus)');
-                            break;
-                        case 'harsh':
-                            filterNode.type = 'lowpass';
-                            filterNode.frequency.value = 3500;
-                            filterNode.Q.value = 0.7;
-                            filterNode.gain.value = 0;
-                            setStatus('🧊 High Harsh Cut (<3.5 kHz focus)');
-                            break;
-                        case 'dark':
-                            filterNode.type = 'lowshelf';
-                            filterNode.frequency.value = 400;
-                            filterNode.Q.value = 0.7;
-                            filterNode.gain.value = 6;
-                            setStatus('🌑 Dark Room (adds body, reduces hiss)');
-                            break;
-                    }
-                }
-            };
-        });
+        if (filterNode) {
+            const preset = e.target.dataset.preset;
+            switch (preset) {
+                case 'voice':
+                    filterNode.type = 'peaking';
+                    filterNode.frequency.value = 1500;
+                    filterNode.Q.value = 1;
+                    filterNode.gain.value = 12;
+                    setStatus('🎤 Voice Boost (1–3 kHz peaking)');
+                    break;
+                case 'clean':
+                    filterNode.type = 'lowpass';
+                    filterNode.frequency.value = 5000;
+                    filterNode.Q.value = 0.7;
+                    filterNode.gain.value = 0;
+                    setStatus('🧹 Clean EVP (cut >5 kHz hiss)');
+                    break;
+                case 'rumble':
+                    filterNode.type = 'highpass';
+                    filterNode.frequency.value = 100;
+                    filterNode.Q.value = 0.7;
+                    filterNode.gain.value = 0;
+                    setStatus('🔈 Remove Rumble (<100 Hz)');
+                    break;
+                case 'whisper':
+                    filterNode.type = 'highpass';
+                    filterNode.frequency.value = 600;
+                    filterNode.Q.value = 0.7;
+                    filterNode.gain.value = 0;
+                    setStatus('👻 Whisper Boost (600 Hz+ focus)');
+                    break;
+                case 'harsh':
+                    filterNode.type = 'lowpass';
+                    filterNode.frequency.value = 3500;
+                    filterNode.Q.value = 0.7;
+                    filterNode.gain.value = 0;
+                    setStatus('🧊 High Harsh Cut (<3.5 kHz focus)');
+                    break;
+                case 'dark':
+                    filterNode.type = 'lowshelf';
+                    filterNode.frequency.value = 400;
+                    filterNode.Q.value = 0.7;
+                    filterNode.gain.value = 6;
+                    setStatus('🌑 Dark Room (adds body, reduces hiss)');
+                    break;
+            }
+        }
+    };
+});
 
 
-        // Safe noise slider (unchanged)
+                // FIXED: Safe noise slider
         if (els.noiseSlider) {
             els.noiseSlider.oninput = (e) => {
                 document.getElementById('noiseVal').textContent = e.target.value;
@@ -492,7 +425,7 @@
             };
         }
 
-        // --- Process EVP: offline render + WAV export (unchanged) ---
+        // --- Process EVP: offline render + WAV export ---
         let processedBlob = null;
 
         async function processEVP() {
@@ -650,15 +583,8 @@
             }
         }
 
-        // keep your existing resize handler, updated to re-render the static waveform
-        window.onresize = () => { 
-            if (audioBuffer) safeDrawWaveform(); 
-            // The live visualization needs a re-initialization of its loop to resize properly if playing.
-            if(isPlaying && animationId) {
-                cancelAnimationFrame(animationId);
-                drawLiveSpectrogram();
-            }
-        };
+        // keep your existing resize handler
+        window.onresize = () => { if (audioBuffer) safeDrawWaveform(); };
     </script>
 </body>
 </html>
