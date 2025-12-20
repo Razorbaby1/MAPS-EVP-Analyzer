@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Submit your EVP — M.A.P.S.</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --bg:#03060a; --panel:#0b0f12; --accent:#00f0ff; --muted:#9aa6ad; }
+    body{ margin:0; min-height:100vh; font-family:Inter, Arial, sans-serif; background: linear-gradient(180deg,#02050a,#071018); color:#e8fbff; display:flex; align-items:flex-start; justify-content:center; padding:28px; }
+    .card{ width:100%; max-width:920px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:22px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+    h2{ margin:0 0 10px 0; color:var(--accent); font-size:20px; }
+    p.lead{ color:var(--muted); margin-top:2px; margin-bottom:12px; }
+    label{ display:block; margin-top:12px; font-size:13px; color:var(--muted); }
+    input[type="text"], input[type="email"], textarea, input[type="file"] { width:100%; padding:10px 12px; border-radius:8px; background:#071017; border:1px solid rgba(255,255,255,0.03); color:#e8fbff; }
+    textarea{ min-height:120px; resize:vertical; }
+    .row { display:flex; gap:12px; margin-top:12px; }
+    .row > div { flex:1; }
+    .btn { display:inline-flex; gap:8px; align-items:center; padding:10px 14px; background:var(--accent); color:#031017; border-radius:8px; font-weight:700; cursor:pointer; border:none; margin-top:12px; }
+    .muted { color:var(--muted); font-size:13px; }
+    .status { margin-top:12px; font-family:monospace; color:var(--muted); }
+    .footer-note { margin-top:18px; font-size:12px; color:var(--muted); text-align:center; }
+    .site-footer { margin-top: 18px; color: var(--muted); font-size: 12px; text-align: center; }
+    .site-footer .exclusive { font-weight: 600; color: #ffdd57; letter-spacing: 0.02em; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <header>
+      <h2>Submit your EVP</h2>
+      <p class="lead">Send us your recording for review. Files are treated confidentially — submissions are reviewed before publishing.</p>
+    </header>
+
+    <!--
+      Serverless flow notes:
+      - This form posts the data and file to a Formspree endpoint (no server needed).
+      - Sign up on https://formspree.io/ and create a form; you'll receive an endpoint URL like:
+        https://formspree.io/f/yourFormId
+      - Replace the FORM_ENDPOINT constant in the script below with that URL.
+    -->
+
+    <form id="evpForm">
+      <label for="name">Name (optional)</label>
+      <input id="name" name="name" type="text" placeholder="Your name (optional)">
+
+      <label for="email">Contact email (optional — helps us follow up)</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com">
+
+      <label for="title">Title / Short description</label>
+      <input id="title" name="title" type="text" placeholder="Short title for your submission" required>
+
+      <label for="notes">Notes about the recording (time, location, context)</label>
+      <textarea id="notes" name="notes" placeholder="Any context for the investigators"></textarea>
+
+      <label for="file">Audio file (WAV / MP3 / M4A). Maximum size depends on your Formspree plan.</label>
+      <input id="file" name="file" type="file" accept="audio/*" required>
+
+      <div class="row">
+        <div>
+          <label><input id="consent" name="consent" type="checkbox" required> I consent to MAPS reviewing and storing this submission.</label>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:flex-end;">
+          <button class="btn" id="submitBtn" type="submit">📤 Submit</button>
+        </div>
+      </div>
+
+      <div class="status" id="submitStatus">Not submitted</div>
+    </form>
+
+    <div class="footer-note">
+      After a successful upload you will be given a quick “Create GitHub Issue” button you can use (when signed in) so the MAPS team can track and moderate submissions.
+    </div>
+
+    <div class="site-footer">
+      <div>© 2026 M.A.P.S. / Quantum Strangeness. All Rights Reserved.</div>
+      <div class="exclusive">Code exclusive to M.A.P.S. Omaha — do not steal</div>
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      // TODO: set your Formspree form endpoint here after creating a form in Formspree.
+      // Example: https://formspree.io/f/abcxyz
+      const FORM_ENDPOINT = "REPLACE_WITH_YOUR_FORMSPREE_ENDPOINT";
+
+      const form = document.getElementById('evpForm');
+      const status = document.getElementById('submitStatus');
+      const submitBtn = document.getElementById('submitBtn');
+
+      function setStatus(msg, isError = false) {
+        status.textContent = msg;
+        status.style.color = isError ? '#ff8b8b' : '';
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!FORM_ENDPOINT || FORM_ENDPOINT.includes('REPLACE_WITH')) {
+          setStatus('Error: FORM_ENDPOINT not set. Follow instructions in the page comments.', true);
+          return;
+        }
+
+        const name = document.getElementById('name').value || 'Anonymous';
+        const email = document.getElementById('email').value || '';
+        const title = document.getElementById('title').value || 'Untitled submission';
+        const notes = document.getElementById('notes').value || '';
+        const fileInput = document.getElementById('file');
+        const file = fileInput.files[0];
+
+        if (!file) {
+          setStatus('Please attach an audio file before submitting.', true);
+          return;
+        }
+
+        submitBtn.disabled = true;
+        setStatus('Uploading submission...');
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('title', title);
+        formData.append('notes', notes);
+        formData.append('file', file);
+
+        try {
+          const res = await fetch(FORM_ENDPOINT, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) {
+            const text = await res.text();
+            console.error('Formspree error:', text);
+            setStatus('Upload failed. See console for details.', true);
+            submitBtn.disabled = false;
+            return;
+          }
+
+          setStatus('Upload successful! Preparing moderation link...');
+
+          // Create a pre-filled GitHub issue link for maintainers (user must be logged in on GitHub)
+          // Replace owner/repo with your repository if different
+          const owner = 'Razorbaby1';
+          const repo = 'New-MAPS-EVP-Analyzer-Visualizer';
+          const issueTitle = encodeURIComponent(`[EVP Submission] ${title}`);
+          // Build issue body including link to the uploaded file if Formspree returns one (Formspree returns JSON for AJAX, but here we used POST)
+          // For Formspree, the response might not include the uploaded file URL via this fetch; you can configure Formspree to email or forward files.
+          // We'll include the filename and notes; moderators can find the uploaded file in Formspree dashboard/email.
+          let issueBody = `**Submitted by:** ${name}\n\n**Email:** ${email || 'N/A'}\n\n**Notes:**\n${notes}\n\n**Attached file:** ${file.name}\n\n>Please review this submission and moderate as needed.`;
+
+          const issueUrl = `https://github.com/${owner}/${repo}/issues/new?title=${issueTitle}&body=${encodeURIComponent(issueBody)}`;
+
+          // Show a link/button to create issue (opens GitHub new issue page)
+          const btn = document.createElement('a');
+          btn.href = issueUrl;
+          btn.target = '_blank';
+          btn.rel = 'noopener noreferrer';
+          btn.textContent = 'Open moderation issue on GitHub';
+          btn.style.display = 'inline-block';
+          btn.style.marginTop = '12px';
+          btn.style.padding = '10px 14px';
+          btn.style.background = 'linear-gradient(90deg,#00f0ff,#7efc6f)';
+          btn.style.color = '#031017';
+          btn.style.borderRadius = '8px';
+          btn.style.fontWeight = '700';
+
+          setStatus('Upload complete. Click the moderation button to create a GitHub issue for review.');
+          status.parentNode.appendChild(btn);
+
+          // Optionally, reset the form after a short delay
+          setTimeout(() => {
+            form.reset();
+            submitBtn.disabled = false;
+          }, 6000);
+
+        } catch (err) {
+          console.error(err);
+          setStatus('Upload failed (network or CORS error). Check console for details.', true);
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
