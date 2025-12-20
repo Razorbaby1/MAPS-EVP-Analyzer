@@ -18,12 +18,13 @@
     textarea{ min-height:120px; resize:vertical; }
     .row { display:flex; gap:12px; margin-top:12px; }
     .row > div { flex:1; }
-    .btn { display:inline-flex; gap:8px; align-items:center; padding:10px 14px; background:var(--accent); color:#031017; border-radius:8px; font-weight:700; cursor:pointer; border:none; margin-top:12px; }
+    .btn { display:inline-flex; gap:8px; align-items:center; padding:10px 14px; background:var(--accent); color:#031017; border-radius:8px; font-weight:700; cursor:pointer; border:none; margin-top:12px; text-decoration:none; }
     .muted { color:var(--muted); font-size:13px; }
     .status { margin-top:12px; font-family:monospace; color:var(--muted); }
     .footer-note { margin-top:18px; font-size:12px; color:var(--muted); text-align:center; }
     .site-footer { margin-top: 18px; color: var(--muted); font-size: 12px; text-align: center; }
     .site-footer .exclusive { font-weight: 600; color: #ffdd57; letter-spacing: 0.02em; margin-top:6px; }
+    a.gh-issue { display:inline-block; margin-top:12px; padding:10px 14px; background:linear-gradient(90deg,#00f0ff,#7efc6f); color:#031017; border-radius:8px; font-weight:700; text-decoration:none; }
   </style>
 </head>
 <body>
@@ -36,12 +37,10 @@
     <!--
       Serverless flow notes:
       - This form posts the data and file to a Formspree endpoint (no server needed).
-      - Sign up on https://formspree.io/ and create a form; you'll receive an endpoint URL like:
-        https://formspree.io/f/yourFormId
-      - Replace the FORM_ENDPOINT constant in the script below with that URL.
+      - You provided the endpoint and it's already inserted into the FORM_ENDPOINT constant below.
     -->
 
-    <form id="evpForm">
+    <form id="evpForm" enctype="multipart/form-data">
       <label for="name">Name (optional)</label>
       <input id="name" name="name" type="text" placeholder="Your name (optional)">
 
@@ -81,9 +80,8 @@
 
   <script>
     (function() {
-      // TODO: set your Formspree form endpoint here after creating a form in Formspree.
-      // Example: https://formspree.io/f/abcxyz
-      const FORM_ENDPOINT = "REPLACE_WITH_YOUR_FORMSPREE_ENDPOINT";
+      // Formspree endpoint provided by you
+      const FORM_ENDPOINT = "https://formspree.io/f/xjgbwegr";
 
       const form = document.getElementById('evpForm');
       const status = document.getElementById('submitStatus');
@@ -96,10 +94,6 @@
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!FORM_ENDPOINT || FORM_ENDPOINT.includes('REPLACE_WITH')) {
-          setStatus('Error: FORM_ENDPOINT not set. Follow instructions in the page comments.', true);
-          return;
-        }
 
         const name = document.getElementById('name').value || 'Anonymous';
         const email = document.getElementById('email').value || '';
@@ -137,41 +131,36 @@
             return;
           }
 
+          // Success
           setStatus('Upload successful! Preparing moderation link...');
 
           // Create a pre-filled GitHub issue link for maintainers (user must be logged in on GitHub)
-          // Replace owner/repo with your repository if different
           const owner = 'Razorbaby1';
           const repo = 'New-MAPS-EVP-Analyzer-Visualizer';
           const issueTitle = encodeURIComponent(`[EVP Submission] ${title}`);
-          // Build issue body including link to the uploaded file if Formspree returns one (Formspree returns JSON for AJAX, but here we used POST)
-          // For Formspree, the response might not include the uploaded file URL via this fetch; you can configure Formspree to email or forward files.
-          // We'll include the filename and notes; moderators can find the uploaded file in Formspree dashboard/email.
           let issueBody = `**Submitted by:** ${name}\n\n**Email:** ${email || 'N/A'}\n\n**Notes:**\n${notes}\n\n**Attached file:** ${file.name}\n\n>Please review this submission and moderate as needed.`;
 
           const issueUrl = `https://github.com/${owner}/${repo}/issues/new?title=${issueTitle}&body=${encodeURIComponent(issueBody)}`;
 
           // Show a link/button to create issue (opens GitHub new issue page)
+          const container = document.createElement('div');
+          container.style.marginTop = '12px';
+
           const btn = document.createElement('a');
           btn.href = issueUrl;
           btn.target = '_blank';
           btn.rel = 'noopener noreferrer';
           btn.textContent = 'Open moderation issue on GitHub';
-          btn.style.display = 'inline-block';
-          btn.style.marginTop = '12px';
-          btn.style.padding = '10px 14px';
-          btn.style.background = 'linear-gradient(90deg,#00f0ff,#7efc6f)';
-          btn.style.color = '#031017';
-          btn.style.borderRadius = '8px';
-          btn.style.fontWeight = '700';
+          btn.className = 'gh-issue';
 
-          setStatus('Upload complete. Click the moderation button to create a GitHub issue for review.');
-          status.parentNode.appendChild(btn);
+          container.appendChild(btn);
+          status.parentNode.appendChild(container);
 
           // Optionally, reset the form after a short delay
           setTimeout(() => {
             form.reset();
             submitBtn.disabled = false;
+            setStatus('Not submitted');
           }, 6000);
 
         } catch (err) {
