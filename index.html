@@ -65,7 +65,9 @@
     h1{ margin:0; font-size:28px; color:var(--neon); text-shadow: 0 6px 18px rgba(0,240,255,0.06); }
     .subtitle{ color:var(--muted); margin-top:6px; font-size:14px; }
 
-    .top-actions{ margin-top:10px; }
+    .top-actions{ margin-top:10px; display:flex; gap:12px; justify-content:center; align-items:center; }
+
+    .top-actions a{ color:var(--neon); text-decoration:none; font-weight:600; background: rgba(0,240,255,0.02); padding:8px 12px; border-radius:8px; border:1px solid rgba(0,240,255,0.04); }
 
     /* upload zone */
     .upload-zone {
@@ -124,11 +126,16 @@
     /* small footer */
     footer{ margin-top:28px; color:var(--muted); font-size:12px; text-align:center; z-index:3; }
 
+    .site-footer { margin-top: 28px; color: var(--muted); font-size: 12px; text-align: center; z-index: 3; }
+    .site-footer .copyright { margin-bottom: 6px; }
+    .site-footer .exclusive { font-weight: 600; color: #ffdd57; letter-spacing: 0.02em; }
+
     /* responsive */
     @media (max-width:740px){
       .container{ padding:14px; }
       .upload-zone{ padding:30px 14px; }
       #controls{ flex-direction:column; }
+      .top-actions{ flex-direction:column; gap:8px; }
     }
   </style>
 </head>
@@ -146,10 +153,9 @@
         </div>
       </div>
 
-      <div class="top-actions">
-        <a href="live-visualizer.html" style="color:var(--neon); text-decoration:none; font-weight:600;">
-          ▶️ Open Live Waveform & Spectrum
-        </a>
+      <div class="top-actions" role="navigation" aria-label="top actions">
+        <a href="live-visualizer.html">▶️ Open Live Waveform & Spectrum</a>
+        <a href="submit.html">📤 Submit your EVP</a>
       </div>
     </header>
 
@@ -206,8 +212,9 @@
       <p style="color:var(--muted); margin-top:8px;"><em>🎧 Headphones recommended.</em></p>
     </div>
 
-    <footer>
-      © MAPS — Experimental visualizer. Inspire, analyze, share.
+    <footer class="site-footer" role="contentinfo" aria-label="site footer">
+      <div class="copyright">© 2026 M.A.P.S. / Quantum Strangeness. All Rights Reserved.</div>
+      <div class="exclusive">Code exclusive to M.A.P.S. Omaha — Please do not scrap, copy, or reverse-engineer or we will Haunt you!</div>
     </footer>
   </div>
 

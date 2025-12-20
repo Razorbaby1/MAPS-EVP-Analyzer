@@ -45,6 +45,9 @@
     .status-bar{ margin-top:12px; color:var(--muted); font-family:monospace; text-align:center; }
     .hidden{ display:none; }
 
+    /* small footer */
+    footer{ margin-top:12px; color:var(--muted); font-size:12px; text-align:center; }
+
     /* responsive */
     @media (max-width:760px){
       .viz-container{ height:300px; }
@@ -86,6 +89,11 @@
     </div>
 
     <div class="status-bar" id="status">Waiting for file...</div>
+
+    <footer>
+      <div>© 2026 M.A.P.S. / Quantum Strangeness. All Rights Reserved.</div>
+      <div style="font-weight:600; color:#ffdd57; margin-top:6px;">Code exclusive to M.A.P.S. Omaha — Please do not scrap, copy, or reverse-engineer or we will Haunt you!</div>
+    </footer>
   </div>
 
   <!-- Full original visualizer JS included below. This wires up the file input and playback. -->
@@ -153,7 +161,7 @@
                 statusEl.textContent = `✅ Loaded: ${file.name} (${(buffer.duration).toFixed(1)}s)`;
                 playBtn.disabled = false;
                 stopBtn.disabled = true;
-            }, (e) => { statusEl.textContent = "Error decoding file."; console.error(e); });
+            }, (e) => statusEl.textContent = "Error decoding file.");
         };
         reader.readAsArrayBuffer(file);
     });
@@ -192,7 +200,7 @@
     function stopAudio() {
         if (sourceNode) {
             try { sourceNode.stop(); } catch(e){}
-            try { sourceNode.disconnect(); } catch(e){}
+            sourceNode.disconnect();
         }
         isPlaying = false;
         playBtn.disabled = false;
