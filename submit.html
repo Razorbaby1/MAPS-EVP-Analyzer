@@ -4,54 +4,239 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Submit your EVP — M.A.P.S.</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- Inter font (system fallback included) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
   <style>
-    :root { --bg:#03060a; --card:#071017; --accent:#00f0ff; --muted:#9aa6ad; }
-    body{ margin:0; min-height:100vh; font-family:Inter, Arial, sans-serif; background: linear-gradient(180deg,#02050a,#071018); color:#e8fbff; display:flex; align-items:center; justify-content:center; padding:28px; }
-    .card{ width:100%; max-width:860px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:28px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 12px 40px rgba(0,0,0,0.6); text-align:center; }
-    h1{ margin:0 0 8px 0; color:var(--accent); font-size:20px; }
-    p.lead{ color:var(--muted); margin:8px 0 18px 0; }
-    .btn { display:inline-block; padding:14px 20px; background:linear-gradient(90deg,#00f0ff,#7efc6f); color:#031017; font-weight:700; border-radius:10px; text-decoration:none; }
-    .note { margin-top:14px; color:var(--muted); font-size:13px; }
-    footer{ margin-top:20px; color:var(--muted); font-size:12px; }
-    .small { color:var(--muted); font-size:13px; margin-top:10px; }
-    .alt { margin-top:14px; display:block; color:#fff; opacity:0.9; font-size:13px; }
-    .email-link { color:#ffd27a; text-decoration:underline; }
+    :root{
+      --bg-1: #06111a;
+      --panel: rgba(255,255,255,0.03);
+      --muted: #9aa6ad;
+      --accent: #00f0ff;
+      --accent-2: #7efc6f;
+      --gold: #ffd27a;
+      --radius: 12px;
+      --max-width: 980px;
+      --card-padding: 28px;
+    }
+
+    /* Page */
+    html,body{ height:100%; margin:0; }
+    body{
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg,#02050a,#071018);
+      color: #e8fbff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Center column */
+    .wrap{
+      width:100%;
+      max-width:var(--max-width);
+      margin:0 auto;
+    }
+
+    /* Hero card with subtle backdrop image (replace --hero-url below) */
+    .hero{
+      position:relative;
+      border-radius:var(--radius);
+      overflow:hidden;
+      background:
+        linear-gradient(180deg, rgba(2,6,10,0.6), rgba(2,6,10,0.6)),
+        url('images/hero-bg.jpg'); /* replace with your image path or remove if not needed */
+      background-size:cover;
+      background-position:center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    .card {
+      padding: var(--card-padding);
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    /* Left side (text) */
+    .hero-left{
+      flex:1 1 420px;
+      min-width:260px;
+    }
+    .logo-row{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:8px;
+    }
+    .site-logo{
+      height:48px;
+      width:auto;
+      border-radius:8px;
+      background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      padding:6px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    h1{
+      margin:0 0 8px 0;
+      font-size:22px;
+      letter-spacing:-0.02em;
+      color:var(--accent);
+    }
+    p.lead{
+      margin:0 0 16px 0;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.45;
+    }
+
+    /* Right side (actions) */
+    .hero-right{
+      width:320px;
+      min-width:240px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:10px;
+      padding:18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    .btn {
+      display:inline-block;
+      width:100%;
+      text-align:center;
+      padding:12px 14px;
+      font-weight:700;
+      border-radius:9px;
+      color:#031017;
+      text-decoration:none;
+      background: linear-gradient(90deg,var(--accent),var(--accent-2));
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+      box-shadow: 0 8px 20px rgba(2,240,255,0.12);
+    }
+    .btn:hover{ transform:translateY(-3px); }
+    .btn:active{ transform:translateY(0); }
+    .btn.secondary{
+      background:transparent;
+      color:var(--gold);
+      border:1px solid rgba(255,255,255,0.06);
+      font-weight:600;
+      box-shadow:none;
+    }
+    .btn.small{ padding:8px 10px; font-size:14px; }
+
+    .muted{ color:var(--muted); font-size:13px; }
+
+    .link-box{
+      margin-top:12px;
+      background:rgba(0,0,0,0.25);
+      border-radius:8px;
+      padding:10px;
+      font-family:monospace;
+      word-break:break-all;
+      color:var(--gold);
+      font-size:13px;
+    }
+
+    .controls{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+
+    /* Footer */
+    .site-footer{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:13px;
+      text-align:center;
+    }
+    .site-footer .small-bold{ color:var(--gold); font-weight:700; margin-top:6px; display:block; }
+
+    /* Responsive */
+    @media (max-width:900px){
+      .hero-right{ width:100%; order:2; }
+      .hero-left{ order:1; }
+      .card{ padding:18px; gap:12px; }
+    }
+    @media (max-width:520px){
+      h1{ font-size:18px; }
+      .site-logo{ height:40px; }
+    }
+
+    /* Accessibility: visible focus */
+    a:focus, button:focus { outline:3px solid rgba(126,252,111,0.18); outline-offset:3px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>📤 Submit your EVP</h1>
-    <p class="lead">Upload your audio file for review. Files will be stored in our secure submission folder — we’ll notify moderators for review.</p>
+  <div class="wrap">
+    <section class="hero" aria-labelledby="submit-heading">
+      <div class="card">
+        <div class="hero-left">
+          <div class="logo-row">
+            <!-- Replace images/logo.png with your logo file path (optional) -->
+            <img src="images/logo.png" alt="MAPS logo" class="site-logo" onerror="this.style.display='none'">
+            <div>
+              <div style="font-size:12px;color:var(--muted);font-weight:600;">M.A.P.S. — Omaha</div>
+              <div style="font-size:12px;color:var(--muted);">Submit an EVP audio file</div>
+            </div>
+          </div>
 
-    <!-- Dropbox request link (quotes and aria-label added for correctness/accessibility) -->
-    <a id="dropboxLink"
-       class="btn"
-       href="https://www.dropbox.com/request/iYKx55HwCW4kKvkJ421L"
-       target="_blank"
-       rel="noopener noreferrer"
-       aria-label="Open Dropbox file upload page in a new tab">Submit a file (open upload page)</a>
+          <h1 id="submit-heading">Send in your EVP recording</h1>
+          <p class="lead">Upload a recording for review by our investigators. Files arrive directly into our secure submissions folder and the team is notified by email. Please include context (time, location, device) in the Dropbox upload form.</p>
 
-    <div class="small">
-      - Supported: WAV / MP3 / M4A — please keep uploads under 50 MB.<br>
-      - After upload, you will see a confirmation on Dropbox and the MAPS team will be notified by email.
+          <div class="site-footer" aria-hidden="false">
+            <div class="muted">If you prefer, you can also email files to:</div>
+            <div style="margin-top:8px;">
+              <a class="btn secondary small" href="mailto:mapsomaha@gmail.com?subject=EVP%20Submission%20from%20website">Email mapsomaha@gmail.com</a>
+            </div>
+            <div class="small-bold">© 2026 M.A.P.S. / Quantum Strangeness</div>
+          </div>
+        </div>
+
+        <aside class="hero-right" aria-label="Submission actions">
+          <div style="font-size:13px; color:var(--muted); font-weight:600;">Ready to submit?</div>
+
+          <!-- Dropbox request link -->
+          <a id="dropboxLink"
+             class="btn"
+             href="https://www.dropbox.com/request/iYKx55HwCW4kKvkJ421L"
+             target="_blank"
+             rel="noopener noreferrer"
+             aria-label="Open Dropbox file upload in a new tab">Submit a file</a>
+
+          <div class="muted" style="margin-top:10px;">Supported: WAV, MP3, M4A — keep files within your plan limits.</div>
+
+          <div class="link-box" role="status" aria-live="polite">
+            <strong style="display:block;color:var(--accent);margin-bottom:6px;">Quick access</strong>
+            <div style="font-size:13px;color:var(--muted);">Drop a file via the button above or use the email option on the left.</div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <a class="btn small" href="https://github.com/Razorbaby1/New-MAPS-EVP-Analyzer-Visualizer" target="_blank" rel="noopener noreferrer">Project on GitHub</a>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- Optional second block: help / tips / contact -->
+    <div style="margin-top:18px; max-width:var(--max-width); margin-left:auto; margin-right:auto; color:var(--muted); font-size:13px;">
+      <strong>Tips for best recordings:</strong>
+      <ul style="margin:8px 0 0 18px;">
+        <li>Keep the microphone close (<1m) to the sound source.</li>
+        <li>Record in WAV or highest quality MP3 available.</li>
+        <li>Include location/time and device info in the notes.</li>
+      </ul>
     </div>
-
-    <div class="note">
-      Prefer to email attachments or have trouble uploading? You can also email files to:
-      <a class="email-link" href="mailto:mapsomaha@gmail.com?subject=EVP%20Submission%20from%20website">mapsomaha@gmail.com</a>
-      <div style="font-size:12px; color:var(--muted); margin-top:6px;"></div>
-    </div>
-
-    <footer>
-      © 2026 M.A.P.S. / Quantum Strangeness. All Rights Reserved.
-      <div style="font-weight:600; color:#ffdd57; margin-top:6px;">Code exclusive to M.A.P.S. Omaha — Please do not scrap, copy, or reverse-engineer or we will Haunt you!</div>
-    </footer>
   </div>
 
   <script>
-    // small UX: show a confirmation if the user returns after uploading in same tab (optional)
-    // nothing required here; main action is the Dropbox link
+    // small enhancement: open dropbox link in new window and focus message (already target="_blank" used).
+    // no JS required for the basic flow — kept intentionally minimal for reliability.
   </script>
 </body>
 </html>
