@@ -4,172 +4,48 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Submit your EVP — M.A.P.S.</title>
-
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
   <style>
-    :root { --bg:#03060a; --panel:#0b0f12; --accent:#00f0ff; --muted:#9aa6ad; }
-    body{ margin:0; min-height:100vh; font-family:Inter, Arial, sans-serif; background: linear-gradient(180deg,#02050a,#071018); color:#e8fbff; display:flex; align-items:flex-start; justify-content:center; padding:28px; }
-    .card{ width:100%; max-width:920px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:22px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
-    h2{ margin:0 0 10px 0; color:var(--accent); font-size:20px; }
-    p.lead{ color:var(--muted); margin-top:2px; margin-bottom:12px; }
-    label{ display:block; margin-top:12px; font-size:13px; color:var(--muted); }
-    input[type="text"], input[type="email"], textarea, input[type="file"] { width:100%; padding:10px 12px; border-radius:8px; background:#071017; border:1px solid rgba(255,255,255,0.03); color:#e8fbff; }
-    textarea{ min-height:120px; resize:vertical; }
-    .row { display:flex; gap:12px; margin-top:12px; }
-    .row > div { flex:1; }
-    .btn { display:inline-flex; gap:8px; align-items:center; padding:10px 14px; background:var(--accent); color:#031017; border-radius:8px; font-weight:700; cursor:pointer; border:none; margin-top:12px; text-decoration:none; }
-    .muted { color:var(--muted); font-size:13px; }
-    .status { margin-top:12px; font-family:monospace; color:var(--muted); }
-    .footer-note { margin-top:18px; font-size:12px; color:var(--muted); text-align:center; }
-    .site-footer { margin-top: 18px; color: var(--muted); font-size: 12px; text-align: center; }
-    .site-footer .exclusive { font-weight: 600; color: #ffdd57; letter-spacing: 0.02em; margin-top:6px; }
-    a.gh-issue { display:inline-block; margin-top:12px; padding:10px 14px; background:linear-gradient(90deg,#00f0ff,#7efc6f); color:#031017; border-radius:8px; font-weight:700; text-decoration:none; }
+    :root { --bg:#03060a; --card:#071017; --accent:#00f0ff; --muted:#9aa6ad; }
+    body{ margin:0; min-height:100vh; font-family:Inter, Arial, sans-serif; background: linear-gradient(180deg,#02050a,#071018); color:#e8fbff; display:flex; align-items:center; justify-content:center; padding:28px; }
+    .card{ width:100%; max-width:860px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:28px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 12px 40px rgba(0,0,0,0.6); text-align:center; }
+    h1{ margin:0 0 8px 0; color:var(--accent); font-size:20px; }
+    p.lead{ color:var(--muted); margin:8px 0 18px 0; }
+    .btn { display:inline-block; padding:14px 20px; background:linear-gradient(90deg,#00f0ff,#7efc6f); color:#031017; font-weight:700; border-radius:10px; text-decoration:none; }
+    .note { margin-top:14px; color:var(--muted); font-size:13px; }
+    footer{ margin-top:20px; color:var(--muted); font-size:12px; }
+    .small { color:var(--muted); font-size:13px; margin-top:10px; }
+    .alt { margin-top:14px; display:block; color:#fff; opacity:0.9; font-size:13px; }
+    .email-link { color:#ffd27a; text-decoration:underline; }
   </style>
 </head>
 <body>
-  <main class="card" role="main">
-    <header>
-      <h2>Submit your EVP</h2>
-      <p class="lead">Send us your recording for review. Files are treated confidentially — submissions are reviewed before publishing.</p>
-    </header>
+  <div class="card">
+    <h1>📤 Submit your EVP</h1>
+    <p class="lead">Upload your audio file for review. Files will be stored in our secure submission folder — we’ll notify moderators for review.</p>
 
-    <!--
-      Serverless flow notes:
-      - This form posts the data and file to a Formspree endpoint (no server needed).
-      - You provided the endpoint and it's already inserted into the FORM_ENDPOINT constant below.
-    -->
+    <!-- Replace DROPBOX_REQUEST_LINK below with the link you got from Dropbox "File requests" -->
+    <a id="dropboxLink" class="btn" href=https://www.dropbox.com/request/iYKx55HwCW4kKvkJ421L target="_blank" rel="noopener noreferrer">Submit a file (open upload page)</a>
 
-    <form id="evpForm" enctype="multipart/form-data">
-      <label for="name">Name (optional)</label>
-      <input id="name" name="name" type="text" placeholder="Your name (optional)">
-
-      <label for="email">Contact email (optional — helps us follow up)</label>
-      <input id="email" name="email" type="email" placeholder="you@example.com">
-
-      <label for="title">Title / Short description</label>
-      <input id="title" name="title" type="text" placeholder="Short title for your submission" required>
-
-      <label for="notes">Notes about the recording (time, location, context)</label>
-      <textarea id="notes" name="notes" placeholder="Any context for the investigators"></textarea>
-
-      <label for="file">Audio file (WAV / MP3 / M4A). Maximum size depends on your Formspree plan.</label>
-      <input id="file" name="file" type="file" accept="audio/*" required>
-
-      <div class="row">
-        <div>
-          <label><input id="consent" name="consent" type="checkbox" required> I consent to MAPS reviewing and storing this submission.</label>
-        </div>
-        <div style="display:flex; align-items:center; justify-content:flex-end;">
-          <button class="btn" id="submitBtn" type="submit">📤 Submit</button>
-        </div>
-      </div>
-
-      <div class="status" id="submitStatus">Not submitted</div>
-    </form>
-
-    <div class="footer-note">
-      After a successful upload you will be given a quick “Create GitHub Issue” button you can use (when signed in) so the MAPS team can track and moderate submissions.
+    <div class="small">
+      - Supported: WAV / MP3 / M4A — please keep uploads under 50 MB (check your Dropbox plan).<br>
+      - After upload, you will see a confirmation on Dropbox and the MAPS team will be notified by email.
     </div>
 
-    <div class="site-footer">
-      <div>© 2026 M.A.P.S. / Quantum Strangeness. All Rights Reserved.</div>
-      <div class="exclusive">Code exclusive to M.A.P.S. Omaha — do not steal</div>
+    <div class="note">
+      Prefer to email attachments or have trouble uploading? You can also email files to: <span class="email-link">mapsomaha@gmail.com</span>
+      <div style="font-size:12px; color:var(--muted); margin-top:6px;">(replace the email above with your real review inbox)</div>
     </div>
-  </main>
+
+    <footer>
+      © 2026 M.A.P.S. / Quantum Strangeness. All Rights Reserved.
+      <div style="font-weight:600; color:#ffdd57; margin-top:6px;">Code exclusive to M.A.P.S. Omaha — Please do not scrap, copy, or reverse-engineer or we will Haunt you!</div>
+    </footer>
+  </div>
 
   <script>
-    (function() {
-      // Formspree endpoint provided by you
-      const FORM_ENDPOINT = "https://formspree.io/f/xjgbwegr";
-
-      const form = document.getElementById('evpForm');
-      const status = document.getElementById('submitStatus');
-      const submitBtn = document.getElementById('submitBtn');
-
-      function setStatus(msg, isError = false) {
-        status.textContent = msg;
-        status.style.color = isError ? '#ff8b8b' : '';
-      }
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const name = document.getElementById('name').value || 'Anonymous';
-        const email = document.getElementById('email').value || '';
-        const title = document.getElementById('title').value || 'Untitled submission';
-        const notes = document.getElementById('notes').value || '';
-        const fileInput = document.getElementById('file');
-        const file = fileInput.files[0];
-
-        if (!file) {
-          setStatus('Please attach an audio file before submitting.', true);
-          return;
-        }
-
-        submitBtn.disabled = true;
-        setStatus('Uploading submission...');
-
-        const formData = new FormData();
-        formData.append('name', name);
-        formData.append('email', email);
-        formData.append('title', title);
-        formData.append('notes', notes);
-        formData.append('file', file);
-
-        try {
-          const res = await fetch(FORM_ENDPOINT, {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (!res.ok) {
-            const text = await res.text();
-            console.error('Formspree error:', text);
-            setStatus('Upload failed. See console for details.', true);
-            submitBtn.disabled = false;
-            return;
-          }
-
-          // Success
-          setStatus('Upload successful! Preparing moderation link...');
-
-          // Create a pre-filled GitHub issue link for maintainers (user must be logged in on GitHub)
-          const owner = 'Razorbaby1';
-          const repo = 'New-MAPS-EVP-Analyzer-Visualizer';
-          const issueTitle = encodeURIComponent(`[EVP Submission] ${title}`);
-          let issueBody = `**Submitted by:** ${name}\n\n**Email:** ${email || 'N/A'}\n\n**Notes:**\n${notes}\n\n**Attached file:** ${file.name}\n\n>Please review this submission and moderate as needed.`;
-
-          const issueUrl = `https://github.com/${owner}/${repo}/issues/new?title=${issueTitle}&body=${encodeURIComponent(issueBody)}`;
-
-          // Show a link/button to create issue (opens GitHub new issue page)
-          const container = document.createElement('div');
-          container.style.marginTop = '12px';
-
-          const btn = document.createElement('a');
-          btn.href = issueUrl;
-          btn.target = '_blank';
-          btn.rel = 'noopener noreferrer';
-          btn.textContent = 'Open moderation issue on GitHub';
-          btn.className = 'gh-issue';
-
-          container.appendChild(btn);
-          status.parentNode.appendChild(container);
-
-          // Optionally, reset the form after a short delay
-          setTimeout(() => {
-            form.reset();
-            submitBtn.disabled = false;
-            setStatus('Not submitted');
-          }, 6000);
-
-        } catch (err) {
-          console.error(err);
-          setStatus('Upload failed (network or CORS error). Check console for details.', true);
-          submitBtn.disabled = false;
-        }
-      });
-    })();
+    // small UX: show a confirmation if the user returns after uploading in same tab (optional)
+    // nothing required here; main action is the Dropbox link
   </script>
 </body>
 </html>
